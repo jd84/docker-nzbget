@@ -1,5 +1,7 @@
 FROM ubuntu:20.04
 
+LABEL org.opencontainers.image.source https://github.com/jd84/docker-nzbget
+
 VOLUME /var/lib/nzbget
 
 RUN apt-get update && apt-get install -y locales curl && rm -rf /var/lib/apt/lists/* \
