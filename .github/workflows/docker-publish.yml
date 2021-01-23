@@ -5,7 +5,6 @@ on:
     # Publish `master` as Docker `latest` image.
     branches:
       - master
-      - aarch64
 
     # Publish `v1.2.3` tags as releases.
     tags:
@@ -19,67 +18,49 @@ env:
   IMAGE_NAME: nzbget
 
 jobs:
-  # Run tests.
-  # See also https://docs.docker.com/docker-hub/builds/automated-testing/
-  # test:
-  #   runs-on: ubuntu-latest
+  Push image to GitHub Packages.
+  See also https://docs.docker.com/docker-hub/builds/
+  amd64:
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - name: Run tests
-  #       run: |
-  #         if [ -f docker-compose.test.yml ]; then
-  #           docker-compose --file docker-compose.test.yml build
-  #           docker-compose --file docker-compose.test.yml run sut
-  #         else
-  #           docker build . --file Dockerfile
-  #         fi
+      - name: Prepare
+        id: prep
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
 
-  # Push image to GitHub Packages.
-  # See also https://docs.docker.com/docker-hub/builds/
-  # push:
-  #   # Ensure test job passes before pushing image.
-  #   needs: test
+          # Strip git ref prefix from version
+          VERSION=$(echo "arm64v8-${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
 
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'push'
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
-  #   steps:
-  #     - uses: actions/checkout@v2
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=arm64v8-latest
 
-  #     - name: Build image
-  #       run: docker build . --file Dockerfile --tag $IMAGE_NAME
+          # Set output parameters.
+          echo ::set-output name=IMAGE_ID::${IMAGE_ID}
+          echo ::set-output name=VERSION::${VERSION}
 
-  #     - name: Log into registry
-  #       run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build image
+        run: docker build . --file Dockerfile --tag $IMAGE_NAME
 
-  #     - name: Push image
-  #       run: |
-  #         IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+      - name: Log into registry
+        run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-  #         # Change all uppercase to lowercase
-  #         IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+      - name: Push image
+        if: github.event_name == 'push'
+        run: |
+          docker tag $IMAGE_NAME ${{ steps.prep.outputs.IMAGE_ID }}:${{ steps.prep.outputs.VERSION }}
+          docker push ${{ steps.prep.outputs.IMAGE_ID }}:${{ steps.prep.outputs.VERSION }}
 
-  #         # Strip git ref prefix from version
-  #         VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-
-  #         # Strip "v" prefix from tag name
-  #         [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-
-  #         # Use Docker `latest` tag convention
-  #         [ "$VERSION" == "master" ] && VERSION=latest
-
-  #         echo IMAGE_ID=$IMAGE_ID
-  #         echo VERSION=$VERSION
-
-  #         docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-  #         docker push $IMAGE_ID:$VERSION
-  # Build image for aarch64
   aarch64:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-
+  
     steps:
       - uses: actions/checkout@v2
 
@@ -119,7 +100,8 @@ jobs:
       - name: Log into registry
         run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      # - name: Push image
-      #   run: |
-      #     docker tag $IMAGE_NAME ${{ steps.prep.outputs.IMAGE_ID }}:${{ steps.prep.outputs.VERSION }}
-      #     docker push ${{ steps.prep.outputs.IMAGE_ID }}:${{ steps.prep.outputs.VERSION }}
+      - name: Push image
+        if: github.event_name == 'push'
+        run: |
+          docker tag $IMAGE_NAME ${{ steps.prep.outputs.IMAGE_ID }}:${{ steps.prep.outputs.VERSION }}
+          docker push ${{ steps.prep.outputs.IMAGE_ID }}:${{ steps.prep.outputs.VERSION }}
