@@ -100,7 +100,7 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.aarch64
           platforms: linux/arm64
           push: false
           tags: latest
