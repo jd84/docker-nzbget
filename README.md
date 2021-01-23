@@ -6,6 +6,7 @@ Run nzbget in docker
 
 ```bash
 docker build . -t nzbget
+docker buildx build --platform linux/arm64 -f Dockerfile.aarch64 .
 ```
 
 # Run
