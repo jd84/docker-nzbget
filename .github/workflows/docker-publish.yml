@@ -96,11 +96,5 @@ jobs:
         run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build image
-        uses: docker/build-push-action@v2
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Dockerfile.aarch64
-          platforms: linux/arm64
-          push: false
-          tags: latest
+        run: |
+          docker buildx build --platform linux/arm64 -f Dockerfile.aarch64 .
