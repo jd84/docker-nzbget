@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y locales curl python3 p7zip-full unrar-f
 RUN curl -L https://nzbget.net/download/nzbget-latest-bin-linux.run --output nzbget-latest-bin-linux.run \
     && bash nzbget-latest-bin-linux.run --destdir /opt/nzbget
 
+COPY GetPw.py /opt/nzbget/scripts/GetPw.py
+
 COPY entrypoint.sh /entrypoint.sh
 COPY run.sh /run.sh
 
